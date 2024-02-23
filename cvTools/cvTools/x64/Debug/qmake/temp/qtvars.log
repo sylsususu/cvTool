@@ -1,0 +1,5 @@
+Info: creating stash file C:\Users\lenovo\AppData\Local\Temp\wb5emefs.g2x\.qmake.stash
+WARNING: Could not parse Compiler option '-Zc:rvalueCast'; added to AdditionalOptions.
+WARNING: You can suppress these warnings with CONFIG+=suppress_vcproj_warnings.
+WARNING: Could not parse Compiler option '-Zc:inline'; added to AdditionalOptions.
+WARNING: Could not parse Compiler option '-Zc:referenceBinding'; added to AdditionalOptions.
