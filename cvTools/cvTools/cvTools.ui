@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1030</width>
+    <width>1069</width>
     <height>969</height>
    </rect>
   </property>
@@ -789,13 +789,27 @@
      <x>470</x>
      <y>650</y>
      <width>111</width>
-     <height>136</height>
+     <height>271</height>
     </rect>
    </property>
    <property name="title">
     <string>GroupBox</string>
    </property>
    <layout class="QGridLayout" name="gridLayout">
+    <item row="2" column="1">
+     <widget class="QLineEdit" name="lineEdit_BandPassUp">
+      <property name="text">
+       <string>40</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="0" colspan="2">
+     <widget class="QPushButton" name="PB_ChangToColorImg">
+      <property name="text">
+       <string>伪彩图</string>
+      </property>
+     </widget>
+    </item>
     <item row="0" column="0" colspan="2">
      <widget class="QPushButton" name="PB_ReadTiff">
       <property name="text">
@@ -803,17 +817,10 @@
       </property>
      </widget>
     </item>
-    <item row="1" column="0">
-     <widget class="QLabel" name="label_4">
+    <item row="4" column="1">
+     <widget class="QLineEdit" name="LE_ColorImgDown">
       <property name="text">
-       <string>down</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QLineEdit" name="LE_BandPassDown">
-      <property name="text">
-       <string>20</string>
+       <string>0</string>
       </property>
      </widget>
     </item>
@@ -824,10 +831,10 @@
       </property>
      </widget>
     </item>
-    <item row="2" column="1">
-     <widget class="QLineEdit" name="lineEdit_BandPassUp">
+    <item row="5" column="1">
+     <widget class="QLineEdit" name="lineEdit_ColorImgUp">
       <property name="text">
-       <string>40</string>
+       <string>1</string>
       </property>
      </widget>
     </item>
@@ -838,7 +845,74 @@
       </property>
      </widget>
     </item>
+    <item row="1" column="1">
+     <widget class="QLineEdit" name="LE_BandPassDown">
+      <property name="text">
+       <string>20</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0">
+     <widget class="QLabel" name="label_6">
+      <property name="text">
+       <string>down</string>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="0">
+     <widget class="QLabel" name="label_7">
+      <property name="text">
+       <string>up</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="label_4">
+      <property name="text">
+       <string>down</string>
+      </property>
+     </widget>
+    </item>
    </layout>
+  </widget>
+  <widget class="QLabel" name="label_ColorCard_1">
+   <property name="geometry">
+    <rect>
+     <x>1040</x>
+     <y>10</y>
+     <width>16</width>
+     <height>511</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_7">
+   <property name="geometry">
+    <rect>
+     <x>590</x>
+     <y>520</y>
+     <width>111</width>
+     <height>80</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>图片叠加</string>
+   </property>
+   <widget class="QPushButton" name="PB_Add2Pic">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>30</y>
+      <width>81</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>叠加两张图片</string>
+    </property>
+   </widget>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>

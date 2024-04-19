@@ -145,6 +145,7 @@ cvTools::cvTools(QWidget *parent)
     : QWidget(parent)
 {
     ui.setupUi(this);
+	ui.label_ColorCard_1->installEventFilter(this);
 	cv::Mat image = cv::imread(".\\image\\R.png");
 	if (!image.empty())
 	{
@@ -201,7 +202,10 @@ cvTools::cvTools(QWidget *parent)
 	connect(ui.PB_ReadTiff, &QPushButton::clicked, this, &cvTools::OpenTiff);
 	//BandPass
 	connect(ui.PB_BandPass, &QPushButton::clicked, this, &cvTools::BandPass);
-	
+	//color
+	connect(ui.PB_ChangToColorImg, &QPushButton::clicked, this, &cvTools::ShowColorImg);
+	//叠加图片
+	connect(ui.PB_Add2Pic, &QPushButton::clicked, this, &cvTools::Add2Pic);
 
 }
 
@@ -266,6 +270,32 @@ void cvTools::OpenImg()
 		m_src = image.clone();
 	}
 	showimg(image);
+}
+
+bool cvTools::eventFilter(QObject * obj, QEvent * event)
+{
+	if (obj == ui.label_ColorCard_1 && event->type() == QEvent::Paint)
+	{
+		///EventFilter中的QPainter设备是需要监视的对象，不能是this父窗口
+		//QPainter painter(this);
+		QPainter painter(ui.label_ColorCard_1);
+		painter.setRenderHint(QPainter::Antialiasing);//反锯齿
+		/*int x = ui.label_ColorCard->x();
+		int y = ui.label_ColorCard->y();*/
+		int x = 0;
+		int y = 0;
+		int w = ui.label_ColorCard_1->rect().width();
+		int h = ui.label_ColorCard_1->rect().height();
+		QLinearGradient linearGradient(x, y, x, y + h);//渐变区域
+		linearGradient.setColorAt(0, Qt::red);
+		/*linearGradient.setColorAt(0.33, Qt::yellow);
+		linearGradient.setColorAt(0.66, Qt::green);*/
+		linearGradient.setColorAt(0.5, Qt::white);
+		linearGradient.setColorAt(1, Qt::blue);
+		painter.setBrush(linearGradient);//设置画刷，则painter.drawRect(rect());绘制出渐变背景
+		painter.drawRect(QRect(x, y, w, h));
+	}
+	return QWidget::eventFilter(obj, event);
 }
 
 void cvTools::OpenTiff()
@@ -649,12 +679,15 @@ void cvTools::OtsuImg()
 
 void cvTools::DB1()
 {
+
 	cv::Mat onMat = cv::imread("./image/db/onMat.tiff", cv::IMREAD_ANYDEPTH);
 	cv::Mat offMat = cv::imread("./image/db/offMat.tiff", cv::IMREAD_ANYDEPTH);
 
 	cv::Mat resultMat;
 	resultMat = onMat / offMat;
 	cv::imwrite("./image/db/DB1.tiff", resultMat);
+
+
 }
 
 void cvTools::DB2()
@@ -832,32 +865,326 @@ void cvTools::BandPass()
 	float up = ui.lineEdit_BandPassUp->text().toFloat();
 	float D0 = down;
 	float D1 = up;
+	//===================================test1============================//
 	//Mat lowpass = gaussian_low_pass_filter(BandPassimage, D0);
 	//Mat highpass = gaussian_high_pass_filter(BandPassimage, D1);
+	//BandPassimageResult = highpass - lowpass;
+	//cv::imwrite("lowpass.tiff", lowpass);
+	//cv::imwrite("highpass.tiff", highpass);
+	//===================================test2============================//
+	//// 高斯低通滤波
+	//cv::Mat lowpass ;
+	//cv::GaussianBlur(BandPassimage, lowpass, cv::Size(5, 5), D0);
+	//// 高斯高通滤波
+	//cv::Mat highpass;
+	//cv::GaussianBlur(BandPassimage, highpass, cv::Size(5, 5), D1);
+	//// 将低通滤波结果和高通滤波结果相加
+	//BandPassimageResult = highpass - lowpass;
+	//cv::imwrite("lowpass.tiff", lowpass);
+	//cv::imwrite("highpass.tiff", highpass);
+	//===================================test3============================//
+	//中值滤波减少椒盐噪声
+	//cv::Mat medMat;
+	//medianBlur(BandPassimage, medMat, 3); // 参数3表示核的大小
+	//双边滤波
+	//cv::Mat filtered;
+	//cv::bilateralFilter(BandPassimage, filtered, 5, 0.1, 1); // 应用双边滤波，参数分别为滤波器的直径、空间高斯函数标准差和灰度值相似性高斯函数标准差
+	//BandPassimageResult = filtered;
 
-	// 高斯低通滤波
-	cv::Mat lowpass;
-	cv::GaussianBlur(BandPassimage, lowpass, cv::Size(0, 0), D0);
+	//===============================test5-形态学================//
+	cv::Mat largeStructureFiltered;
+	cv::Mat smallStructureFiltered;
+	// 大结构滤波至50像素
+	cv::Mat largeStructureKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(D1, D1));
+	cv::morphologyEx(BandPassimage, largeStructureFiltered, cv::MORPH_CLOSE, largeStructureKernel);
+	// 小结构滤波至3像素
+	cv::Mat smallStructureKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(D0, D0));
+	cv::morphologyEx(BandPassimage, smallStructureFiltered, cv::MORPH_CLOSE, smallStructureKernel);
+	for (int i = 0; i < 9; i++)
+	{
+		cv::morphologyEx(smallStructureFiltered, smallStructureFiltered, cv::MORPH_CLOSE, smallStructureKernel);
+	}
+	
+	cv::imwrite("largeStructureFiltered.tiff", largeStructureFiltered);
+	cv::imwrite("smallStructureFiltered.tiff", smallStructureFiltered);
+	BandPassimageResult = smallStructureFiltered -largeStructureFiltered;
+	BandPassimageResult = smallStructureFiltered ;
 
-	// 高斯高通滤波
-	cv::Mat highpass;
-	cv::GaussianBlur(BandPassimage, highpass, cv::Size(0, 0), D1);
 
-	// 将低通滤波结果和高通滤波结果相加
-	Mat bandpass = highpass - lowpass;
+	
+	
+	
+
+	//==========================结果展示=======================//
+	cv::normalize(BandPassimageResult, BandPassimageResult, 0, 1, cv::NORM_MINMAX);
+	cv::imwrite("BandPassimageResult.tiff", BandPassimageResult);
+	cv::Mat bandpassShow;
+	cv::normalize(BandPassimageResult, bandpassShow, 0, 255, cv::NORM_MINMAX);
+	bandpassShow.convertTo(bandpassShow, CV_8U);
+	// 对图像进行去噪处理
+	/*fastNlMeansDenoising(bandpassShow, bandpassShow, 15, 5, 21);*/
+	cv::resize(bandpassShow, bandpassShow, cv::Size(ui.InputImg->width(), ui.InputImg->height()));
+	showoutimg(bandpassShow);
+
+}
+
+void cvTools::ShowColorImg()
+{
+	QPixmap pix = grab(QRect(ui.label_ColorCard_1->x(), ui.label_ColorCard_1->y(), ui.label_ColorCard_1->width(), ui.label_ColorCard_1->height()));
+	QImage image0 = pix.toImage();
+	QVector<double>magValueVec;
+	for (int i = 0; i < BandPassimageResult.rows; i++) {
+		for (int j = 0; j < BandPassimageResult.cols; j++) {
+			magValueVec.push_back(BandPassimageResult.at<float>(i, j));
+		}
+	}
+
+	QImage colorImg_1 = ChangetoQcolorimg(BandPassimageResult.cols, BandPassimageResult.rows, magValueVec,
+		ui.LE_ColorImgDown->text().toDouble(), ui.lineEdit_ColorImgUp->text().toDouble(), image0);
+
+	QImage imgScaled = colorImg_1.scaled(ui.InputImg->width(), ui.InputImg->height(), Qt::IgnoreAspectRatio);
+	QPixmap pixmap = QPixmap::fromImage(imgScaled);
+	ui.OutputImg->setPixmap(pixmap);
+
+	magValueVec.clear();
+	for (int i = 0; i < BandPassimage.rows; i++) {
+		for (int j = 0; j < BandPassimage.cols; j++) {
+			magValueVec.push_back(BandPassimage.at<float>(i, j));
+		}
+	}
+	colorImg_1 = ChangetoQcolorimg(BandPassimage.cols, BandPassimage.rows, magValueVec,
+		ui.LE_ColorImgDown->text().toDouble(), ui.lineEdit_ColorImgUp->text().toDouble(), image0);
+	imgScaled = colorImg_1.scaled(ui.InputImg->width(), ui.InputImg->height(), Qt::IgnoreAspectRatio);
+	pixmap = QPixmap::fromImage(imgScaled);
+	ui.InputImg->setPixmap(pixmap);
+
+}
+
+QImage cvTools::ChangetoQcolorimg(int img_width, int img_height, const QVector<double>& magnetic_strength, double down, double up, QImage & image0)
+{
+	int w_pic = img_width;
+	int h_pic = img_height;
+	QVector<QRgb> rgbColourTable;
+	QImage img = QImage(w_pic, h_pic, QImage::Format_Indexed8);
+	QVector<uchar>grayvalue;
 
 
 
-	cv::imwrite("lowpass.tiff", lowpass);
-	cv::imwrite("highpass.tiff", highpass);
-	cv::normalize(bandpass, bandpass, 0, 1, cv::NORM_MINMAX);
-	cv::imwrite("bandpass.tiff", bandpass);
+	if (w_pic * h_pic != magnetic_strength.size())
+	{
+		return img;
+	}
+	if (down >= up)
+	{
+		return img;
+	}
+
+	for (int i = 0; i < w_pic * h_pic; i++)
+	{
+		if (magnetic_strength[i] <= down)
+		{
+			grayvalue.push_back((uchar)0);
+		}
+		if (magnetic_strength[i] >= up)
+		{
+			grayvalue.push_back((uchar)255);
+		}
+		if ((magnetic_strength[i] < up) && (magnetic_strength[i] > down))
+		{
+			int tmp = (magnetic_strength[i] - down) / (up - down) * 255;
+			uchar utmp = (uchar)tmp;
+			grayvalue.push_back(utmp);
+		}
+
+	}
+
+	for (int row = 0; row < h_pic; ++row) {
+		uchar* scanLine = img.scanLine(row); // 获取每一行的地址
+		memcpy(scanLine, &grayvalue[row * w_pic], w_pic); // 将数据拷贝到对应地址
+	}
 
 
-	//// 对结果进行适当的缩放和调整
-	cv::normalize(bandpass, bandpass, 0, 255, cv::NORM_MINMAX);
-	bandpass.convertTo(bandpass, CV_8U);
-	cv::resize(bandpass, bandpass, cv::Size(ui.InputImg->width(), ui.InputImg->height()));
-	showoutimg(bandpass);
+	QImage copyImage = img.copy(); // 复制整个图像
+	for (int y = 0; y < 256; y++)
+	{
+
+		QColor color;
+		int index = (int)((float)(y) / (float)(255) * (float)(image0.height() - 2));
+
+		if (index == 0)
+		{
+			color = image0.pixelColor(QPoint(1, image0.height() - 2));
+		}
+		else if (index == image0.height() - 2)
+		{
+			color = image0.pixelColor(QPoint(1, 1));
+		}
+		else
+		{
+
+			color = image0.pixelColor(QPoint(1, image0.height() - 2 - index));
+		}
+
+		QRgb rgb = color.rgb();
+		rgbColourTable.push_back(rgb);
+	}
+
+
+	copyImage.setColorTable(rgbColourTable);
+
+
+
+	return copyImage;
+}
+
+void cvTools::Add2Pic()
+{
+	QString imgPath = QFileDialog::getOpenFileName(nullptr, "选择A", "", "All Files (*);;Text Files (*.tiff)");
+	//小尺寸图片
+	cv::Mat A = cv::imread(QStr2Str(imgPath), cv::IMREAD_UNCHANGED | cv::IMREAD_ANYDEPTH);
+	cv::Mat A_color;
+	if (!A.empty())
+	{
+		cv::normalize(A, A, 0, 1, cv::NORM_MINMAX, CV_32F);
+		// 将32F图片A转换为8U图片
+		cv::Mat A_8U;
+		A.convertTo(A_8U, CV_8U, 255.0);
+
+		// 创建BGRA图片
+		cv::Mat BGRA(A.rows, A.cols, CV_8UC4);
+
+		// 映射到伪彩色空间
+		cv::applyColorMap(A_8U, BGRA, cv::COLORMAP_JET);
+
+		// 设置透明度为40%
+		for (int i = 0; i < BGRA.rows; i++) {
+			for (int j = 0; j < BGRA.cols; j++) {
+				uchar* pSrc = BGRA.ptr<uchar>(i, j);
+				pSrc[3] = 0.4 * 255; // 设置透明度为40%
+			}
+		}
+		A_color = BGRA.clone();
+		imshow("A", A_color);
+	}
+	else
+	{
+		return;
+	}
+
+	imgPath = QFileDialog::getOpenFileName(nullptr, "选择B", "", "All Files (*);;Text Files (*.tiff)");
+	//大尺寸图片
+	cv::Mat B = cv::imread(QStr2Str(imgPath), cv::IMREAD_UNCHANGED | cv::IMREAD_ANYDEPTH);
+	cv::Mat B_color;
+	if (!B.empty())
+	{
+		cv::normalize(B, B, 0, 1, cv::NORM_MINMAX, CV_32F);
+		// 将32F图片A转换为8U图片
+		cv::Mat B_8U;
+		B.convertTo(B_8U, CV_8U, 255.0);
+
+		// 创建BGRA图片
+		cv::Mat BGRA(B.rows, B.cols, CV_8UC4);
+
+		// 映射到伪彩色空间
+		//cv::applyColorMap(B_8U, BGRA, cv::COLORMAP_JET);
+
+		// 设置透明度为40%
+		for (int i = 0; i < BGRA.rows; i++) {
+			for (int j = 0; j < BGRA.cols; j++) {
+				uchar* pSrc = BGRA.ptr<uchar>(i, j);
+				pSrc[0] = B_8U.at<uchar>(i, j);
+				pSrc[1] = B_8U.at<uchar>(i, j);
+				pSrc[2] = B_8U.at<uchar>(i, j);
+				pSrc[3] = 255; // 设置透明度为40%
+			}
+		}
+		B_color = BGRA.clone();
+		cv::resize(B_color, B_color, A_color.size());
+		imshow("B", B_color);
+	}
+	else
+	{
+		return;
+	}
+	if (A_color.type() != B_color.type()) {
+		// 如果数据类型不同，进行类型转换
+		B_color.convertTo(B_color, A_color.type());
+	}
+	if (A_color.size()!= B_color.size())
+	{
+		cv::resize(B_color, B_color, A_color.size());
+	}
+
+	// 将彩色图像A和B_color叠加
+	cv::Mat result(A_color.rows, A_color.cols, CV_8UC4);
+
+	for (int i = 0; i < A_color.rows; i++) {
+		for (int j = 0; j < A_color.cols; j++) {
+			
+			uchar* colorA = A_color.ptr<uchar>(i, j);
+			uchar* colorB = B_color.ptr<uchar>(i, j);
+
+			// 计算叠加后的颜色值，考虑透明度
+			float alphaA = colorA[3] / 255.0;
+			float alphaB = colorB[3] / 255.0;
+
+			cv::Vec4b resultColor;
+			resultColor[0] = alphaA * colorA[0] + (1 - alphaA) * alphaB * colorB[0];
+			resultColor[1] = alphaA * colorA[1] + (1 - alphaA) * alphaB * colorB[1];
+			resultColor[2] = alphaA * colorA[2] + (1 - alphaA) * alphaB * colorB[2];
+			resultColor[3] = std::max(colorA[3], colorB[3]); // 保留较大的透明度
+
+			result.at<cv::Vec4b>(i, j) = resultColor;
+		}
+	}
+
+	imshow("C", result);
+	//////////////////////////////==========================================/////////////////////////////////////////////
+	QString backgroundimagePath = QFileDialog::getOpenFileName(nullptr, "选择背景图片", "", "All Files (*);;Text Files (*.tiff)");
+	cv::Mat backMat = cv::imread(QStr2Str(backgroundimagePath), cv::IMREAD_UNCHANGED | cv::IMREAD_ANYDEPTH);
+	if (!backMat.empty())
+	{
+		cv::normalize(backMat, backMat, 0, 1, cv::NORM_MINMAX);
+		backMat.convertTo(backMat, CV_8U, 255.0);
+		cv::resize(backMat, backMat, cv::Size(206, 306));
+		// 转换为RGB格式的cv::Mat
+		cv::Mat RGBMat;
+		cv::cvtColor(backMat, RGBMat, cv::COLOR_GRAY2RGB);
+		// 如果需要透明度，可以使用以下代码
+		QImage backimage(RGBMat.data, RGBMat.cols, RGBMat.rows, RGBMat.step, QImage::Format_ARGB32);
+
+		QImage ABC;//伪彩img
+		QImage forwardimage = ABC.convertToFormat(QImage::Format_ARGB32);
+		for (int y = 0; y < forwardimage.height(); ++y) {
+			QRgb *scanLine = reinterpret_cast<QRgb*>(forwardimage.scanLine(y));
+			for (int x = 0; x < forwardimage.width(); ++x) {
+				QRgb color = scanLine[x];
+				int alpha = qAlpha(color) * 0.4; // 40% opacity
+				scanLine[x] = qRgba(qRed(color), qGreen(color), qBlue(color), alpha);
+			}
+		}
+
+		// 确保两张图像的大小相同
+		if (backimage.size() != forwardimage.size()) {
+			// 可以进行适当的缩放或裁剪操作使它们大小一致
+			return;
+		}
+
+		// 创建一个新的QImage对象用于存储叠加后的图像
+		QImage result(backimage.size(), QImage::Format_ARGB32);
+		result.fill(Qt::transparent); // 填充透明背景
+
+		// 将两张图像叠加在一起
+		QPainter painter(&result);
+		painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+		painter.drawImage(0, 0, backimage);
+		painter.drawImage(0, 0, forwardimage);
+		painter.end();
+
+	}
+	else
+	{
+		return;
+	}
 
 }
