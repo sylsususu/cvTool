@@ -631,6 +631,9 @@
    </widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_2">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>340</x>
@@ -793,7 +796,7 @@
     </rect>
    </property>
    <property name="title">
-    <string>GroupBox</string>
+    <string>带通滤波器</string>
    </property>
    <layout class="QGridLayout" name="gridLayout">
     <item row="2" column="1">

@@ -288,8 +288,8 @@ bool cvTools::eventFilter(QObject * obj, QEvent * event)
 		int h = ui.label_ColorCard_1->rect().height();
 		QLinearGradient linearGradient(x, y, x, y + h);//渐变区域
 		linearGradient.setColorAt(0, Qt::red);
-		/*linearGradient.setColorAt(0.33, Qt::yellow);
-		linearGradient.setColorAt(0.66, Qt::green);*/
+		//linearGradient.setColorAt(0.33, Qt::yellow);
+		//linearGradient.setColorAt(0.66, Qt::green);
 		linearGradient.setColorAt(0.5, Qt::white);
 		linearGradient.setColorAt(1, Qt::blue);
 		painter.setBrush(linearGradient);//设置画刷，则painter.drawRect(rect());绘制出渐变背景
