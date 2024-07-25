@@ -207,6 +207,9 @@ cvTools::cvTools(QWidget *parent)
 	//叠加图片
 	connect(ui.PB_Add2Pic, &QPushButton::clicked, this, &cvTools::Add2Pic);
 
+
+	
+	
 }
 
 cvTools::~cvTools()
@@ -298,11 +301,41 @@ bool cvTools::eventFilter(QObject * obj, QEvent * event)
 	return QWidget::eventFilter(obj, event);
 }
 
+void readTiff(QString fileName, int & width, int & height, QVector<float>& resultVec)
+{
+	QByteArray data = fileName.toLocal8Bit();
+	string tmpstr = string(data);
+
+	cv::Mat image;     //创建一个空图像image
+	image = cv::imread(tmpstr, cv::IMREAD_ANYDEPTH);  //读取文件夹中的图像
+	image.convertTo(image, CV_32FC1);
+	if (image.empty()) {
+		return; // 返回空的QVector
+	}
+	CV_Assert(image.channels() == 1); // 确保是单通道的Mat
+
+	int rows = image.rows;
+	int cols = image.cols;
+
+	width = cols;
+	height = rows;
+	int Size_byte = width * height;
+	resultVec.resize(Size_byte);
+
+	//#pragma omp parallel for num_threads(4)
+	for (int i = 0; i < rows; i++) {
+		const float* ptr = image.ptr<float>(i);
+		for (int j = 0; j < cols; j++) {
+			resultVec[i*cols + j] = ptr[j];
+		}
+	}
+}
+
 void cvTools::OpenTiff()
 {
 	// 加载OpenCV图像
 	 // 弹出文件对话框
-	QString imgPath = QFileDialog::getOpenFileName(nullptr, "选择文件", "", "All Files (*);;Text Files (*.tiff)");
+	/*QString imgPath = QFileDialog::getOpenFileName(nullptr, "选择文件", "", "All Files (*);;Text Files (*.tiff)");
 
 	BandPassimage = cv::imread(QStr2Str(imgPath), cv::IMREAD_UNCHANGED| cv::IMREAD_ANYDEPTH);
 	if (!BandPassimage.empty())
@@ -312,9 +345,63 @@ void cvTools::OpenTiff()
 		showimage.convertTo(showimage, CV_8U);
 		cv::resize(showimage, showimage, cv::Size(ui.InputImg->width(), ui.InputImg->height()));
 		showimg(showimage);
-	}
-	
+	}*/
 
+	QString dirName = QFileDialog::getExistingDirectory(this, ("选择导入照片目录"), "", QFileDialog::Option::ReadOnly);
+	if (dirName.isNull())
+	{
+		return;
+	}
+	QDir dir(dirName);
+	dir.setFilter(QDir::Files);
+	dir.setSorting(QDir::Time | QDir::Reversed);
+	QFileInfoList list = dir.entryInfoList();
+
+	QVector<QString>allFilepath;
+	foreach(QFileInfo file, list)
+	{
+		QString filePath = file.filePath();
+		allFilepath.push_back(filePath);
+	}
+	std::vector<cv::Mat> imageArray;
+	for (int i=0;i< allFilepath.size();i++)
+	{
+		QByteArray data2 = allFilepath[0].toLocal8Bit();
+		string strtiff = string(data2);
+		cv::Mat image = cv::imread(strtiff, cv::IMREAD_ANYDEPTH);
+		imageArray.push_back(image);
+	}
+	for (int j=1;j<37;j++)
+	{
+		
+		cv::Mat S = cv::Mat::zeros(imageArray[0].rows, imageArray[0].cols, CV_32FC1);
+		for (int i=0;i<100;i++)
+		{
+			cv::Mat image0 = imageArray[i].clone();
+			float tmp = 1.0;
+			if (sin(2 * M_PI / 100*i)==0)
+			{
+				tmp = 0;
+			}
+			else
+			{
+				tmp = sin(2 * M_PI / 100*i + M_PI / 18 * j) / sin(2 * M_PI / 100*i);
+				
+			}
+			qDebug() << tmp;
+			image0 *= tmp;
+			S += image0;
+		}
+		S /= 100;
+		S *= 2;
+		float k = -1.56226;
+		S /= k;
+		QString str = QString::number(j)+ ".tiff";
+		QByteArray data = str.toLocal8Bit();
+		string strtiff = string(data);
+		cv::imwrite(strtiff, S);
+		qDebug() << j;
+	}
 	
 }
 
